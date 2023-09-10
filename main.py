@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
-
+from pydantic import BaseModel
 import crud, models, schemas
 from database import SessionLocal, engine
 
@@ -48,3 +48,31 @@ def read_customer(customer_id: int, db: Session = Depends(get_db)):
     if db_customer is None:
         raise HTTPException(status_code=404, detail="Customer not found")
     return db_customer
+
+class StripeWebhookData(BaseModel):
+    object: dict[str, str | int | bool | list|  dict[str, str | int | bool | list | None] | None] | None = None
+
+
+class StripeWebhookEvent(BaseModel):
+    id: str | None = None
+    type: str | None = None
+    object: str | None = None
+    api_version: str | None = None
+    created : int | None = None
+    request: dict[str, str | None] | None = None
+    livemode : bool | None = None
+    pending_webhooks : int | None = None
+    data: StripeWebhookData | None = None
+
+@app.post("/stripe-webhook")
+async def stripe_webhook(event: StripeWebhookEvent):
+    # Process the event (sync with your customer catalog)
+    # Replace this with your synchronization logic
+
+    # Respond to Stripe to acknowledge receipt of the event
+    return {"message": "Webhook received", "event": event}
+
+# async def start_ngrok():
+#     # Start Ngrok and expose the FastAPI app
+#     tunnel = await ngrok.connect(8000, authtoken_from_env=True)
+#     print (f"Ingress established at {tunnel}")
