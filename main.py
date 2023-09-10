@@ -56,11 +56,22 @@ def create_customer(customer: schemas.Customer, db: Session = Depends(get_db)):
         )
     return crud.create_customer(db=db, customer=customer)
 
-@app.put("/customers/", response_model=schemas.Customer)
+@app.put("/customers/")
 def edit_customer(customer: schemas.Customer, db: Session = Depends(get_db)):
     db_customer = crud.get_customer_by_email(db, email=customer.email)
     if not db_customer:
-        raise HTTPException(status_code=400, detail="Email doesn't exit")
+        raise HTTPException(status_code=400, detail="Email doesn't exist")
+    stripeCustomers = getListStripe()
+    stripeCustomer = None
+    for stripeC in stripeCustomers['data']:
+        if(stripeC['email'] == db_customer.email):
+            stripeCustomer = stripeC
+            break
+    stripe.Customer.modify(
+        stripeCustomer['id'],
+        name = customer.name,
+        email = customer.email
+        )
     return crud.edit_customer_by_email(db=db, customer=customer)
 
 @app.get("/customers/")
@@ -107,7 +118,7 @@ async def stripe_webhook(event: StripeWebhookEvent, db: Session = Depends(get_db
             customer = schemas.Customer(email=event.data.object["email"], name=event.data.object["name"])
 
             return crud.create_customer(db=db, customer=customer)
- 
+
         if event.type == "customer.updated": # Cross checking for update in only name, only email, both
             if "email" in event.data.previous_attributes:
                 customer = schemas.Customer(email=event.data.previous_attributes["email"], name=event.data.object["name"])
