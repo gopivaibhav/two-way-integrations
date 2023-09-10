@@ -1,17 +1,19 @@
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 import crud, models, schemas
 from database import SessionLocal, engine
-import stripe, os
+import stripe, os, zmq
 from dotenv import load_dotenv
 load_dotenv()
 stripe.api_key = os.getenv("STRIPE_API_KEY")
+context = zmq.Context()
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
+socket = context.socket(zmq.REQ)
+socket.connect("tcp://localhost:5555")
 
 # Dependency
 def get_db():
@@ -50,11 +52,15 @@ def create_customer(customer: schemas.Customer, db: Session = Depends(get_db)):
     db_customer = crud.get_customer_by_email(db, email=customer.email)
     if db_customer:
         raise HTTPException(status_code=400, detail="Email already registered")
-    stripe.Customer.create(
-        name = customer.name,
-        email = customer.email
-        )
-    return crud.create_customer(db=db, customer=customer)
+    # stripe.Customer.create(
+    #     name = customer.name,
+    #     email = customer.email
+    #     )
+    socket.send(b"create-user")
+    message = socket.recv()
+    print("Received reply %s [ %s ]" % (message, message))
+    return {"message": "User created"}
+    # return crud.create_customer(db=db, customer=customer)
 
 @app.put("/customers/")
 def edit_customer(customer: schemas.Customer, db: Session = Depends(get_db)):
