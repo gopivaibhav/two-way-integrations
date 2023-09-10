@@ -1,8 +1,8 @@
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
-from . import crud, models, schemas
-from .database import SessionLocal, engine
+import crud, models, schemas
+from database import SessionLocal, engine
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -18,6 +18,10 @@ def get_db():
         db.close()
 
 
+@app.get("/")
+def root():
+    return {"message": "Open Docs at /docs or /redoc to see the API documentation"}
+
 @app.post("/customers/", response_model=schemas.Customer)
 def create_customer(user: schemas.Customer, db: Session = Depends(get_db)):
     db_user = crud.get_customer_by_email(db, email=user.email)
@@ -26,7 +30,7 @@ def create_customer(user: schemas.Customer, db: Session = Depends(get_db)):
     return crud.create_customer(db=db, user=user)
 
 
-@app.get("/customers/", response_model=list[schemas.User])
+@app.get("/customers/", response_model=list[schemas.Customer])
 def read_customers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     users = crud.get_customers(db, skip=skip, limit=limit)
     return users

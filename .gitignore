@@ -1,3 +1,4 @@
 # Virutal environment 
 venv 
 requirements.txt
+__pycache__
