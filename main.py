@@ -23,17 +23,23 @@ def root():
     return {"message": "Open Docs at /docs or /redoc to see the API documentation"}
 
 @app.post("/customers/", response_model=schemas.Customer)
-def create_customer(user: schemas.Customer, db: Session = Depends(get_db)):
-    db_user = crud.get_customer_by_email(db, email=user.email)
-    if db_user:
+def create_customer(customer: schemas.Customer, db: Session = Depends(get_db)):
+    db_customer = crud.get_customer_by_email(db, email=customer.email)
+    if db_customer:
         raise HTTPException(status_code=400, detail="Email already registered")
-    return crud.create_customer(db=db, user=user)
+    return crud.create_customer(db=db, customer=customer)
 
+@app.put("/customers/{customer_id}", response_model=schemas.Customer)
+def edit_customer(customer: schemas.Customer, db: Session = Depends(get_db)):
+    db_customer = crud.get_customer_by_email(db, email=customer.email)
+    if not db_customer:
+        raise HTTPException(status_code=400, detail="Email doesn't exit")
+    return crud.edit_customer_by_email(db=db, customer=customer)
 
 @app.get("/customers/", response_model=list[schemas.Customer])
 def read_customers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    users = crud.get_customers(db, skip=skip, limit=limit)
-    return users
+    customers = crud.get_customers(db, skip=skip, limit=limit)
+    return customers
 
 
 @app.get("/customers/{customer_id}", response_model=schemas.Customer)

@@ -21,3 +21,10 @@ def create_customer(db: Session, customer: schemas.Customer):
     db.commit()
     db.refresh(db_customer)
     return db_customer
+
+def edit_customer_by_email(db: Session, customer: schemas.Customer):
+    db_edit = db.query(models.Customer).filter(models.Customer.email == customer.email).first()
+    db_edit.name = customer.name
+    db.commit()
+    db.refresh(db_edit)
+    return db_edit
