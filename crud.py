@@ -28,3 +28,12 @@ def edit_customer_by_email(db: Session, customer: schemas.Customer):
     db.commit()
     db.refresh(db_edit)
     return db_edit
+
+def delete_customer_by_email(db: Session, customer: schemas.Customer):
+    db_customer = db.query(models.Customer).filter(models.Customer.email == customer.email).first()
+    db.delete(db_customer)
+    db.commit()
+    return {"message": "Customer deleted"}
+
+def count_customers(db: Session):
+    return db.query(models.Customer).count()

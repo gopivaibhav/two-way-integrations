@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 
 class Customer(BaseModel):
-    id: int
     email: str
     name: str
     class Config:
