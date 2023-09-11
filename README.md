@@ -41,6 +41,8 @@ Webhook (I chose Option 2):
 - Exposed this server as a webhook to Stripe using Ngrok.
 - Stripe will send events to this webhook for changes in its customer catalog.
 - Processed these events to sync my product's customer catalog.
+- I have also added many edge cases to check if the user created is already present, or if the user is already deleted when deleting, etc.
+![Webhook logs when testing the data for edge cases](stripe-webhook.png)
 
 ### Extending for Future Integrations
 
