@@ -1,17 +1,19 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-
+import json
+from json import JSONEncoder
 from database import Base
 
 
-class Customer(Base): # Older className is User, users
+class Customer(Base, JSONEncoder): # Older className is User, users
     __tablename__ = "customers"
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
     name = Column(String)
     # items = relationship("Item", back_populates="owner")
-
+    def toDict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 # class Product(Base):
 #     __tablename__ = "products"

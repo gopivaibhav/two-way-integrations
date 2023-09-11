@@ -3,10 +3,8 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import crud, models, schemas
 from database import SessionLocal, engine
-import stripe, os, zmq
-from dotenv import load_dotenv
-load_dotenv()
-stripe.api_key = os.getenv("STRIPE_API_KEY")
+import zmq, json
+
 context = zmq.Context()
 
 models.Base.metadata.create_all(bind=engine)
@@ -39,8 +37,7 @@ class StripeWebhookEvent(BaseModel):
     pending_webhooks : int | None = None
     data: StripeWebhookData | None = None
 
-def getListStripe():
-    return stripe.Customer.list()
+
 
 @app.get("/")
 def root():
@@ -52,38 +49,29 @@ def create_customer(customer: schemas.Customer, db: Session = Depends(get_db)):
     db_customer = crud.get_customer_by_email(db, email=customer.email)
     if db_customer:
         raise HTTPException(status_code=400, detail="Email already registered")
-    # stripe.Customer.create(
-    #     name = customer.name,
-    #     email = customer.email
-    #     )
-    socket.send(b"create-user")
+    socket.send(b"create-" + bytes(customer.toJSON(), encoding='utf8'))
     message = socket.recv()
-    print("Received reply %s [ %s ]" % (message, message))
-    return {"message": "User created"}
-    # return crud.create_customer(db=db, customer=customer)
+    print("Received reply - %s" % (message.decode("utf-8")))
+    # return {"message": "User created"}
+    return crud.create_customer(db=db, customer=customer)
 
 @app.put("/customers/")
 def edit_customer(customer: schemas.Customer, db: Session = Depends(get_db)):
     db_customer = crud.get_customer_by_email(db, email=customer.email)
     if not db_customer:
         raise HTTPException(status_code=400, detail="Email doesn't exist")
-    stripeCustomers = getListStripe()
-    stripeCustomer = None
-    for stripeC in stripeCustomers['data']:
-        if(stripeC['email'] == db_customer.email):
-            stripeCustomer = stripeC
-            break
-    stripe.Customer.modify(
-        stripeCustomer['id'],
-        name = customer.name,
-        email = customer.email
-        )
+    socket.send(b"update-" + bytes(customer.toJSON(), encoding='utf8'))
+    message = socket.recv()
+    print("Received reply - %s" % (message.decode("utf-8")))
+    # return {"message": "User Updated"}
     return crud.edit_customer_by_email(db=db, customer=customer)
 
 @app.get("/customers/")
 def read_customers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     customers = crud.get_customers(db, skip=skip, limit=limit)
-    return {"customers": customers, "stripeList": getListStripe()}
+    socket.send(b'read-{"all":"all"}')
+    message = socket.recv()
+    return {"customers": customers, "stripeList": json.loads(message.decode('utf-8'))}
 
 
 @app.get("/customers/{customer_id}")
@@ -91,26 +79,20 @@ def read_customer(customer_id: int, db: Session = Depends(get_db)):
     db_customer = crud.get_customer(db, customer_id=customer_id)
     if db_customer is None:
         raise HTTPException(status_code=404, detail="Customer not found")
-    stripeCustomers = getListStripe()
-    stripeCustomer = None
-    for customer in stripeCustomers['data']:
-        if(customer['email'] == db_customer.email):
-            stripeCustomer = customer
-            break
-    return {"customer":db_customer, "stripeCustomer": stripeCustomer}
+    socket.send(b"get-" + bytes(json.dumps(db_customer.toDict()), encoding='utf8'))
+    message = socket.recv()
+    print("Received reply - %s" % (message.decode("utf-8")))
+    return {"customer":db_customer, "stripeCustomer": json.loads(message.decode('utf-8'))}
 
 @app.delete("/customers/{customer_id}")
 def delete_customer(customer_id: int, db: Session = Depends(get_db)):
     db_customer = crud.get_customer(db, customer_id=customer_id)
     if db_customer is None:
         raise HTTPException(status_code=404, detail="Customer not found")
-    stripeCustomers = getListStripe()
-    stripeCustomer = None
-    for customer in stripeCustomers['data']:
-        if(customer['email'] == db_customer.email):
-            stripeCustomer = customer
-            break
-    stripe.Customer.delete(stripeCustomer['id'])
+    socket.send(b"delete-" + bytes(json.dumps(db_customer.toDict()), encoding='utf8'))
+    message = socket.recv()
+    print("Received reply - %s" % (message.decode("utf-8")))
+    # return {"message":"user deleted"}
     return crud.delete_customer_by_email(db=db, customer=db_customer)
 
 @app.post("/stripe-webhook")
