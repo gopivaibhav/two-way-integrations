@@ -5,12 +5,12 @@ import crud, models, schemas
 from database import SessionLocal, engine
 import zmq, json
 
-context = zmq.Context()
+context = zmq.Context() # Here, Context serves as the container for all ZeroMQ sockets 
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-socket = context.socket(zmq.REQ)
+socket = context.socket(zmq.REQ) # REQ sockets are used to send requests
 socket.connect("tcp://localhost:5555")
 
 # Dependency
@@ -25,7 +25,7 @@ class StripeWebhookData(BaseModel):
     object: dict[str, str | int | bool | list|  dict[str, str | int | bool | list | None] | None] | None = None
     previous_attributes: dict[str, str | None ] | None = None
 
-
+# Request object schema which we get from Stripe webhook
 class StripeWebhookEvent(BaseModel):
     id: str | None = None
     type: str | None = None
@@ -43,7 +43,7 @@ class StripeWebhookEvent(BaseModel):
 def root():
     return {"message": "Open Docs at /docs or /redoc to see the API documentation"}
 
-# @app.post("/customers/", response_model=schemas.Customer)
+
 @app.post("/customers/")
 def create_customer(customer: schemas.Customer, db: Session = Depends(get_db)):
     db_customer = crud.get_customer_by_email(db, email=customer.email)
@@ -52,7 +52,6 @@ def create_customer(customer: schemas.Customer, db: Session = Depends(get_db)):
     socket.send(b"create-" + bytes(customer.toJSON(), encoding='utf8'))
     message = socket.recv()
     print("Received reply - %s" % (message.decode("utf-8")))
-    # return {"message": "User created"}
     return crud.create_customer(db=db, customer=customer)
 
 @app.put("/customers/")
@@ -63,7 +62,6 @@ def edit_customer(customer: schemas.Customer, db: Session = Depends(get_db)):
     socket.send(b"update-" + bytes(customer.toJSON(), encoding='utf8'))
     message = socket.recv()
     print("Received reply - %s" % (message.decode("utf-8")))
-    # return {"message": "User Updated"}
     return crud.edit_customer_by_email(db=db, customer=customer)
 
 @app.get("/customers/")
@@ -92,14 +90,12 @@ def delete_customer(customer_id: int, db: Session = Depends(get_db)):
     socket.send(b"delete-" + bytes(json.dumps(db_customer.toDict()), encoding='utf8'))
     message = socket.recv()
     print("Received reply - %s" % (message.decode("utf-8")))
-    # return {"message":"user deleted"}
     return crud.delete_customer_by_email(db=db, customer=db_customer)
 
 @app.post("/stripe-webhook")
 async def stripe_webhook(event: StripeWebhookEvent, db: Session = Depends(get_db)):
     try:
         if event.type == "customer.created":
-            print(event.data.object['name'], event.data.object['email'])
             db_customer = crud.get_customer_by_email(db, email=event.data.object["email"])
             if db_customer:
                 return {"message": "Customer is already registered"}

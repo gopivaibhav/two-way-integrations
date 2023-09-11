@@ -1,22 +1,25 @@
 import json, os, schemas
 import zmq, stripe
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv() # Loading .env to use environment variables
 stripe.api_key = os.getenv("STRIPE_API_KEY")
 
+# Function to return all the Customers List available on Stripe
 def getListStripe():
     return stripe.Customer.list()
 
+
+# Function to Create a Customer on Stripe with the given details
 def createStripeCustomer(customer: schemas.Customer):
-    # print(customer['email'], customer['name'])
     stripe.Customer.create(
         name = customer['name'],
         email = customer['email']
         )
     print("created customer with API")
 
-context = zmq.Context()
-socket = context.socket(zmq.REP)
+
+context = zmq.Context() # Here, Context serves as the container for all ZeroMQ sockets 
+socket = context.socket(zmq.REP) # REP sockets are used to receive requests
 socket.bind("tcp://*:5555")
 
 print("Server is up and running")
@@ -24,17 +27,17 @@ print("Server is up and running")
 while True:
     #  Wait for next request from client
     message = socket.recv()
-    # print("Received request: %s" % json.loads(message.decode("utf-8").split('-')[1])['name'])
 
     data = json.loads(message.decode("utf-8").split('-')[1])
-    # time.sleep(1)
     operation = message.decode("utf-8").split('-')[0]
+
+    # Operation was sent from main.py file to check the event whether to create, update, delete or get the customers.
+
     if(operation == "create"):
         createStripeCustomer(data)
         socket.send(b"Created - %b customer" % (bytes(data['email'], encoding='utf-8')))
 
     if(operation == "update"):
-        # createStripeCustomer(data)
         stripeCustomers = getListStripe()
         stripeCustomer = None
         for stripeC in stripeCustomers['data']:
@@ -55,7 +58,6 @@ while True:
             if(customer['email'] == data['email']):
                 stripeCustomer = customer
                 break
-        print(stripeCustomer['id'])
         stripe.Customer.delete(stripeCustomer['id'])
         socket.send(b"Deleted - %b customer" % (bytes(data['email'], encoding='utf-8')))
 
@@ -69,5 +71,4 @@ while True:
             if(customer['email'] == data['email']):
                 stripeCustomer = customer
                 break
-        print(stripeCustomer['id'])
         socket.send(json.dumps(stripeCustomer, indent=2).encode('utf-8'))

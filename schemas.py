@@ -1,10 +1,6 @@
 from pydantic import BaseModel
 import json
 
-# class CustomerBase(BaseModel):
-#     email: str
-
-
 class Customer(BaseModel):
     email: str
     name: str
