@@ -18,7 +18,7 @@ This project demonstrates the implementation of a two-way integration system tha
 
 ## Requirements 
 
-Before getting started, I made these prerequisites as given in the [assignment](https://zenskar.notion.site/Zenskar-Assignment-Back-End-Engineer-Intern-c2b28fa7ed0247008197c09d10ff8532) :
+Before getting started, I made these prerequisites:
 
 1. **Database**: Created a simple customer table in an SQL-based relational database (using SQLite) with columns (ID, name, email).
 
@@ -54,5 +54,3 @@ To extend this integration for additional systems like Salesforce's customer cat
 ## Conclusion
 
 This project showcases a flexible two-way integration system that synchronizes a local customer catalog with external services like Stripe. With a well-structured and modular codebase, it is easy to extend this system to support additional integrations and other systems within the product.
-
-Feel free to reach out if you have any questions or need further assistance.
